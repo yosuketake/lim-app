@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>資産成長シミュレーション（暴落条件改）</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #result { margin-top: 20px; }
+    .advice { background: #f0f8ff; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>資産成長シミュレーション（暴落条件改）</h2>
+
+  <form id="form">
+    年齢: <input type="number" id="age" value="35"> 歳<br>
+    初期資産: <input type="number" id="initial" value="1000000"> 円<br>
+    毎月の投資額: <input type="number" id="monthly" value="50000"> 円<br>
+    投資期間(年): <input type="number" id="years" value="30"> 年<br>
+    <button type="button" onclick="simulate()">シミュレーション開始</button>
+  </form>
+
+  <canvas id="chart" width="600" height="400"></canvas>
+
+  <div id="result"></div>
+
+  <script>
+    let chart;
+
+    // 過去20年間の平均利回り（実際はAPIで取得）
+    const avgReturns = {
+      nasdaq: 0.118, // 11.8%
+      sp500: 0.082,  // 8.2%
+      bonds: 0.035   // 3.5%
+    };
+
+    function simulate() {
+      const age = parseInt(document.getElementById("age").value);
+      const initial = parseFloat(document.getElementById("initial").value);
+      const monthly = parseFloat(document.getElementById("monthly").value);
+      const years = parseInt(document.getElementById("years").value);
+
+      // 年齢別推奨アセットと利回り
+      let targetAsset = "";
+      let rate = 0;
+      if (age < 40) { targetAsset = "NASDAQ"; rate = avgReturns.nasdaq; }
+      else if (age < 60) { targetAsset = "S&P500"; rate = avgReturns.sp500; }
+      else { targetAsset = "米国債"; rate = avgReturns.bonds; }
+
+      const labels = [];
+      const normalCase = [];
+      const worstCase = [];
+
+      let totalNormal = initial;
+      let totalWorst = initial;
+
+      for (let year = 1; year <= years; year++) {
+        // 通常ケース（常に成長）
+        totalNormal = totalNormal * (1 + rate) + monthly * 12;
+
+        // ワーストケース
+        // 暴落発生判定（20年ごと → -40%、5年ごと → -20%）
+        if (year % 20 === 0) {
+          totalWorst *= 0.6;
+        } else if (year % 5 === 0) {
+          totalWorst *= 0.8;
+        }
+        // 毎年の成長
+        totalWorst = totalWorst * (1 + rate) + monthly * 12;
+
+        labels.push(year + "年後");
+        normalCase.push(Math.round(totalNormal));
+        worstCase.push(Math.round(totalWorst));
+      }
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById("chart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            { label: "通常ケース", data: normalCase, borderColor: "green", fill: false },
+            { label: "ワーストケース（20年ごと-40%、5年ごと-20%）", data: worstCase, borderColor: "red", fill: false }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+
+      document.getElementById("result").innerHTML = `
+        <div class="advice">
+          <h3>推奨投資対象</h3>
+          年齢 ${age} 歳のあなたには <b>${targetAsset}</b> を推奨します。
+        </div>
+        <div class="advice">
+          <h3>根拠</h3>
+          過去20年間の平均年利：<br>
+          NASDAQ: ${(avgReturns.nasdaq*100).toFixed(1)}%<br>
+          S&P500: ${(avgReturns.sp500*100).toFixed(1)}%<br>
+          米国債: ${(avgReturns.bonds*100).toFixed(1)}%<br>
+          本シミュレーションでは、20年ごとに-40%、5年ごとに-20%の暴落を想定しました。
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
