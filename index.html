@@ -2,36 +2,54 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>資産成長シミュレーション（アドバイス追加）</title>
+  <title>資産成長シミュレーション（統合＋タイムマシン）</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; padding: 20px; line-height: 1.6; }
     h2 { margin-top: 0; }
-    form input[type="number"] { width: 120px; }
+    form input[type="number"], select { width: 140px; }
     .controls { margin-top: 12px; margin-bottom: 12px; }
     .controls label { margin-right: 12px; }
     .advice-box { background: #f7fbff; border-left: 4px solid #4895ef; padding: 12px; border-radius: 6px; margin-top: 12px; }
-    .scenario-list { margin-top: 8px; }
     canvas { max-width: 100%; height: auto; }
     .small { font-size: 0.9em; color: #333; }
+    .hint { color: #666; font-size: 0.9em; margin-top: 6px; display:block; }
   </style>
 </head>
 <body>
-  <h2>資産成長シミュレーション（修正版）</h2>
+  <h2>資産成長シミュレーション（統合版 + タイムマシン）</h2>
 
   <form id="form" onsubmit="return false;">
-    年齢: <input type="number" id="age" value="35" min="18"> 歳<br><br>
-    初期資産: <input type="number" id="initial" value="1000000" step="1000"> 円<br><br>
-    毎月の投資額: <input type="number" id="monthly" value="50000" step="1000"> 円<br><br>
-    投資期間(年): <input type="number" id="years" value="30" min="1" max="80"> 年<br><br>
+    <div>
+      年齢: <input type="number" id="age" value="35" min="18"> 歳
+    </div>
+    <div>
+      初期資産: <input type="number" id="initial" value="1000000" step="1000"> 円
+    </div>
+    <div>
+      毎月の投資額: <input type="number" id="monthly" value="50000" step="1000"> 円
+    </div>
+    <div>
+      投資期間(年): <input type="number" id="years" value="30" min="1" max="80"> 年
+      <span class="hint">※タイムマシンを使う場合は無視されます（開始年を過去に選ぶと自動でタイムマシンモードになります）。</span>
+    </div>
 
-    切替方式:
-    <label><input type="radio" name="mode" value="default" checked> デフォルト設定</label>
-    <label><input type="radio" name="mode" value="custom"> カスタム設定</label>
-    <div id="custom-settings" style="display:none; margin-top:8px; margin-left:10px;">
-      NASDAQ → <input type="number" id="nasdaqEnd" value="40" min="18" max="120"> 歳まで<br>
-      S&P500 → <input type="number" id="sp500End" value="60" min="18" max="120"> 歳まで<br>
-      （それ以降は米国債）
+    <div style="margin-top:10px;">
+      切替方式:
+      <select id="switchMode">
+        <option value="default">デフォルト（40歳NASDAQ→60歳S&P500→米国債）</option>
+        <option value="custom">カスタム</option>
+      </select>
+    </div>
+    <div id="customSettings" style="margin-left:10px; margin-top:6px;">
+      NASDAQ終了年齢: <input type="number" id="customNasdaq" value="40" min="18" max="120">
+      S&P500終了年齢: <input type="number" id="customSp500" value="60" min="18" max="120">
+    </div>
+
+    <div style="margin-top:12px;">
+      投資開始年（タイムマシン）： 
+      <select id="startYear"></select>
+      <span class="hint">過去（1980〜2023）を選ぶとタイムマシンモードになります。2024を選ぶと通常（未来予測）モードです。</span>
     </div>
 
     <div class="controls">
@@ -40,7 +58,7 @@
   </form>
 
   <div class="scenario-list small">
-    表示するシナリオ:
+    表示するシナリオ（通常モード適用）:
     <label><input type="checkbox" id="normalCase" checked> 通常ケース</label>
     <label><input type="checkbox" id="midCrisis"> 中間期の危機</label>
     <label><input type="checkbox" id="lateCrisis"> 終了直前の危機</label>
@@ -52,81 +70,40 @@
   <div id="result"></div>
 
   <script>
+    const CURRENT_YEAR = 2024;
+    const avgReturns = { nasdaq: 0.118, sp500: 0.082, bonds: 0.04 };
+
+    // タイムマシン anchor サンプル（MVP用、実データに差し替え可能）
+    const spAnchors = { 1980:135, 1985:211, 1990:330, 1995:616, 2000:1320, 2005:1248, 2010:1257, 2015:2043, 2020:3756, 2024:5000 };
+    const nasAnchors = { 1980:160, 1985:300, 1990:460, 1995:1050, 2000:3770, 2005:2200, 2010:2300, 2015:5007, 2020:12888, 2024:16000 };
+
+    // 年選択をポピュレート
+    const startYearSelect = document.getElementById("startYear");
+    for (let y = 1980; y <= CURRENT_YEAR; y++) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.text = y;
+      if (y === CURRENT_YEAR) opt.selected = true;
+      startYearSelect.appendChild(opt);
+    }
+
     let chart = null;
 
-    // デフォルトの平均利回り（年率）
-    const avgReturns = {
-      nasdaq: 0.118, // 11.8%
-      sp500: 0.082,  // 8.2%
-      bonds: 0.035   // 3.5%
-    };
-
-    // 年齢→資産クラス決定（default or custom）: 戻り値 { name, rate }
-    function getAssetForAge(age, mode, nasdaqEnd, sp500End) {
-      if (mode === "forceSP500") {
-        return { name: "S&P500", rate: avgReturns.sp500 };
-      }
-      if (mode === "default") {
-        if (age < 40) return { name: "NASDAQ", rate: avgReturns.nasdaq };
-        if (age < 60) return { name: "S&P500", rate: avgReturns.sp500 };
-        return { name: "米国債", rate: avgReturns.bonds };
-      } else { // custom
-        if (age <= nasdaqEnd) return { name: "NASDAQ", rate: avgReturns.nasdaq };
-        if (age <= sp500End) return { name: "S&P500", rate: avgReturns.sp500 };
-        return { name: "米国債", rate: avgReturns.bonds };
-      }
-    }
-
-    // 金融危機を2年で合計40%下落させる関数(年単位で1年目0.8、2年目0.75を適用)
-    function isCrisisYear(crisisType, yearIndex, years) {
-      if (crisisType === "mid") {
-        const start = Math.floor(years / 2);
-        return yearIndex === start || yearIndex === start + 1;
-      } else if (crisisType === "late") {
-        const start = years - 4;
-        return yearIndex === start || yearIndex === start + 1;
-      } else if (crisisType === "sp500late") {
-        const start = years - 4;
-        return yearIndex === start || yearIndex === start + 1;
-      }
-      return false;
-    }
-
-    // 単一シナリオのシミュレーション（返り値: {labels[], data[] }）
-    function simulateScenario(startAge, initial, monthly, years, mode, nasdaqEnd, sp500End, crisisType) {
-      let total = initial;
-      const labels = [];
-      const data = [];
-
-      for (let y = 1; y <= years; y++) {
-        const currentAge = startAge + y;
-        const asset = getAssetForAge(currentAge, mode, nasdaqEnd, sp500End);
-        // 金融危機適用（株式のみ、債券なら下落させない）
-        if (crisisType === "mid" || crisisType === "late") {
-          const startIdx = (crisisType === "mid") ? Math.floor(years/2) : (years - 4);
-          if (y === startIdx && asset.name !== "米国債") {
-            total *= 0.8; // 1年目 20%下落 → 残80%
-          } else if (y === startIdx + 1 && asset.name !== "米国債") {
-            total *= 0.75; // 2年目 さらに25%（合計で 0.8 * 0.75 = 0.6 → 40%下落）
-          }
-        } else if (crisisType === "sp500late") {
-          // S&P500固定でのショック（債券なら下落しないが、forceSP500なら株式扱い）
-          const startIdx = years - 4;
-          if (y === startIdx) total *= 0.8;
-          else if (y === startIdx + 1) total *= 0.75;
+    function interpolateAnchors(anchors) {
+      const years = Object.keys(anchors).map(Number).sort((a,b)=>a-b);
+      const series = {};
+      for (let i = 0; i < years.length - 1; i++) {
+        const y0 = years[i], y1 = years[i+1];
+        const v0 = anchors[y0], v1 = anchors[y1];
+        const step = (v1 - v0) / (y1 - y0);
+        for (let y = y0; y <= y1; y++) {
+          series[y] = v0 + step * (y - y0);
         }
-
-        // 成長（積立は年次で加算）
-        const assetRate = asset.rate;
-        total = total * (1 + assetRate) + monthly * 12;
-
-        labels.push(`${y}年後 (${currentAge}歳)`);
-        data.push(Math.round(total));
       }
-      return { labels, data };
+      series[years[years.length - 1]] = anchors[years[years.length - 1]];
+      return series;
     }
 
-    // 年齢別アドバイステンプレート
     function getAdviceText(age, years) {
       if (age < 40) {
         return `${age}歳のあなたは平均寿命まで長い時間があります。${years}年程度の長期投資は有効で、複利の効果で資産を大きく伸ばせます。短期の値動きに振り回されず定期的に投資を続けることを意識しましょう。`;
@@ -139,95 +116,190 @@
       }
     }
 
-    // 表示用：シミュレーションを実行してチャート更新・アドバイス表示
+    // 既存の詳細シナリオ計算（通常モード用）
+    function simulateScenarioDetailed(startAge, initial, monthly, years, mode, nasdaqEnd, sp500End, crisisType) {
+      let totalNormal = initial;
+      let totalWorst = initial;
+      const labels = [];
+      const normalCase = [];
+      const worstCase = [];
+
+      for (let y = 1; y <= years; y++) {
+        const currentAge = startAge + y - 1;
+        let rate;
+        if (mode === "forceSP500") {
+          rate = avgReturns.sp500;
+        } else if (mode === "default") {
+          if (currentAge < 40) rate = avgReturns.nasdaq;
+          else if (currentAge < 60) rate = avgReturns.sp500;
+          else rate = avgReturns.bonds;
+        } else { // custom
+          if (currentAge <= nasdaqEnd) rate = avgReturns.nasdaq;
+          else if (currentAge <= sp500End) rate = avgReturns.sp500;
+          else rate = avgReturns.bonds;
+        }
+
+        // 通常ケース
+        totalNormal = (totalNormal + monthly * 12) * (1 + rate);
+
+        // ワーストケースの処理（crisisType指定時は指定箇所で2年かけて合計40%下落）
+        if (crisisType === "mid") {
+          const startIdx = Math.floor(years / 2);
+          if (y === startIdx) totalWorst *= 0.8;
+          else if (y === startIdx + 1) totalWorst *= 0.75;
+        } else if (crisisType === "late") {
+          const startIdx = years - 4;
+          if (y === startIdx) totalWorst *= 0.8;
+          else if (y === startIdx + 1) totalWorst *= 0.75;
+        } else if (crisisType === "sp500late") {
+          const startIdx = years - 4;
+          if (y === startIdx) totalWorst *= 0.8;
+          else if (y === startIdx + 1) totalWorst *= 0.75;
+        } else {
+          // 元の周期的ワーストケース（補完）：3年ごと-20%、20年ごと-40%
+          if (y % 20 === 0) totalWorst *= 0.6;
+          else if (y % 3 === 0) totalWorst *= 0.8;
+        }
+
+        totalWorst = (totalWorst + monthly * 12) * (1 + rate);
+
+        labels.push(`${y}年後 (${startAge + y}歳)`);
+        normalCase.push(Math.round(totalNormal));
+        worstCase.push(Math.round(totalWorst));
+      }
+
+      return { labels, data: normalCase, worst: worstCase };
+    }
+
+    function simulateTimeMachineSeries(startYear, initial, monthly, spSeriesFull, nasSeriesFull, bondAnnualReturn) {
+      const labels = [];
+      const spValues = [];
+      const nasValues = [];
+      const bondValues = [];
+      let totalSp = initial;
+      let totalNas = initial;
+      let totalBond = initial;
+
+      for (let y = startYear; y <= CURRENT_YEAR; y++) {
+        labels.push(`${y}年`);
+        if (y === startYear) {
+          spValues.push(Math.round(totalSp));
+          nasValues.push(Math.round(totalNas));
+          bondValues.push(Math.round(totalBond));
+        } else {
+          const spFactor = spSeriesFull[y] / spSeriesFull[y - 1];
+          totalSp = totalSp * spFactor + monthly * 12;
+          spValues.push(Math.round(totalSp));
+
+          const nasFactor = nasSeriesFull[y] / nasSeriesFull[y - 1];
+          totalNas = totalNas * nasFactor + monthly * 12;
+          nasValues.push(Math.round(totalNas));
+
+          totalBond = totalBond * (1 + bondAnnualReturn) + monthly * 12;
+          bondValues.push(Math.round(totalBond));
+        }
+      }
+      return { labels, spValues, nasValues, bondValues };
+    }
+
+    function showChart(labels, datasets) {
+      if (chart) chart.destroy();
+      const ctx = document.getElementById("chart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'nearest', axis: 'x', intersect: false },
+          plugins: {
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() + '円' } },
+            legend: { position: 'top' }
+          },
+          scales: { y: { ticks: { callback: v => v.toLocaleString() + '円' } } }
+        }
+      });
+    }
+
     function simulate() {
       const startAge = parseInt(document.getElementById("age").value);
       const initial = parseFloat(document.getElementById("initial").value);
       const monthly = parseFloat(document.getElementById("monthly").value);
       const years = parseInt(document.getElementById("years").value);
+      const switchMode = document.getElementById("switchMode").value;
+      const customNasdaq = parseInt(document.getElementById("customNasdaq").value) || 40;
+      const customSp500 = parseInt(document.getElementById("customSp500").value) || 60;
+      const startYear = parseInt(document.getElementById("startYear").value);
 
-      const mode = document.querySelector("input[name='mode']:checked").value;
-      const nasdaqEnd = parseInt(document.getElementById("nasdaqEnd").value) || 40;
-      const sp500End = parseInt(document.getElementById("sp500End").value) || 60;
+      const useTimeMachine = startYear < CURRENT_YEAR;
 
-      // 4つのシナリオ
-      const normal = simulateScenario(startAge, initial, monthly, years, mode, nasdaqEnd, sp500End, "none");
-      const mid = simulateScenario(startAge, initial, monthly, years, mode, nasdaqEnd, sp500End, "mid");
-      const late = simulateScenario(startAge, initial, monthly, years, mode, nasdaqEnd, sp500End, "late");
-      // S&P500固定は全期間をS&P500で運用（forceSP500）
-      const sp500late = simulateScenario(startAge, initial, monthly, years, "forceSP500", nasdaqEnd, sp500End, "sp500late");
+      if (!useTimeMachine) {
+        // 通常モード
+        const normal = simulateScenarioDetailed(startAge, initial, monthly, years, switchMode, customNasdaq, customSp500, "none");
+        const mid = simulateScenarioDetailed(startAge, initial, monthly, years, switchMode, customNasdaq, customSp500, "mid");
+        const late = simulateScenarioDetailed(startAge, initial, monthly, years, switchMode, customNasdaq, customSp500, "late");
+        const sp500late = simulateScenarioDetailed(startAge, initial, monthly, years, "forceSP500", customNasdaq, customSp500, "sp500late");
 
-      // チェックボックスで表示制御
-      const showNormal = document.getElementById("normalCase").checked;
-      const showMid = document.getElementById("midCrisis").checked;
-      const showLate = document.getElementById("lateCrisis").checked;
-      const showSP500Late = document.getElementById("sp500Crisis").checked;
+        const showNormal = document.getElementById("normalCase").checked;
+        const showMid = document.getElementById("midCrisis").checked;
+        const showLate = document.getElementById("lateCrisis").checked;
+        const showSP500Late = document.getElementById("sp500Crisis").checked;
 
-      // チャート描画（labelsはnormalのlabelsを利用）
-      if (chart) chart.destroy();
-      const ctx = document.getElementById("chart").getContext("2d");
+        const datasets = [];
+        if (showNormal) datasets.push({ label: "通常ケース", data: normal.data, borderColor: "#2f855a", fill: false, tension: 0.2 });
+        if (showMid) datasets.push({ label: "中間期の危機（中間で2年合計40%下落）", data: mid.worst, borderColor: "#dd6b20", fill: false, tension: 0.2 });
+        if (showLate) datasets.push({ label: "終了直前の危機（終了4年前から2年で40%）", data: late.worst, borderColor: "#c53030", fill: false, tension: 0.2 });
+        if (showSP500Late) datasets.push({ label: "S&P500固定・終了直前の危機", data: sp500late.worst, borderColor: "#2b6cb0", fill: false, tension: 0.2 });
 
-      chart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: normal.labels,
-          datasets: [
-            { label: "通常ケース", data: normal.data, borderColor: "#2f855a", backgroundColor: "#2f855a22", hidden: !showNormal, fill: false, tension: 0.2 },
-            { label: "中間期の危機（投資中間で2年40%下落）", data: mid.data, borderColor: "#dd6b20", backgroundColor: "#dd6b2022", hidden: !showMid, fill: false, tension: 0.2 },
-            { label: "終了直前の危機（終了4年前から2年で40%下落）", data: late.data, borderColor: "#c53030", backgroundColor: "#c5303022", hidden: !showLate, fill: false, tension: 0.2 },
-            { label: "S&P500固定・終了直前の危機", data: sp500late.data, borderColor: "#2b6cb0", backgroundColor: "#2b6cb022", hidden: !showSP500Late, fill: false, tension: 0.2 }
-          ]
-        },
-        options: {
-          responsive: true,
-          interaction: { mode: 'nearest', axis: 'x', intersect: false },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return context.dataset.label + ': ' + context.raw.toLocaleString() + '円';
-                }
-              }
-            },
-            legend: { position: 'top' }
-          },
-          scales: {
-            y: {
-              ticks: {
-                callback: function(value) { return value.toLocaleString() + '円'; }
-              }
-            }
-          }
-        }
-      });
+        showChart(normal.labels, datasets);
 
-      // アドバイス表示（年齢に応じたテンプレート）
-      const adviceText = getAdviceText(startAge, years);
-      const scenarioText = `
-        <div class="advice-box">
-          <strong>シナリオ（前提）</strong>
-          <ul>
-            <li>通常ケース：年齢に応じてNASDAQ / S&P500 / 米国債の利回りを適用（平均利回りは過去データを想定）</li>
-            <li>中間期の危機：投資期間の中間開始で2年かけて合計40%下落（米国債は下落しない）</li>
-            <li>終了直前の危機：投資終了の4年前から2年で合計40%下落（米国債は下落しない）</li>
-            <li>S&P500固定：全期間S&P500で運用し、終了直前ショックを想定</li>
-          </ul>
-        </div>
-      `;
-      const adviceHtml = `<div class="advice-box"><strong>あなたへのアドバイス</strong><p>${adviceText}</p><p class="small">※目安です。家計・収入・税金・公的年金等は考慮していません。</p></div>`;
+        const adviceText = getAdviceText(startAge, years);
+        const scenarioText = `
+          <div class="advice-box">
+            <strong>シナリオ（前提）</strong>
+            <ul>
+              <li>通常ケース：年齢に応じてNASDAQ / S&P500 / 米国債の利回りを適用（平均利回りは過去データを想定）</li>
+              <li>中間期の危機：投資期間の中間開始で2年かけて合計40%下落（米国債は下落しない）</li>
+              <li>終了直前の危機：投資終了の4年前から2年で合計40%下落（米国債は下落しない）</li>
+              <li>S&P500固定：全期間S&P500で運用し、終了直前ショックを想定</li>
+            </ul>
+          </div>
+        `;
+        const adviceHtml = `<div class="advice-box"><strong>あなたへのアドバイス</strong><p>${adviceText}</p><p class="small">※目安です。家計・税金・公的年金等は考慮していません。</p></div>`;
 
-      document.getElementById("result").innerHTML = scenarioText + adviceHtml;
+        document.getElementById("result").innerHTML = scenarioText + adviceHtml;
+
+      } else {
+        // タイムマシンモード
+        const spSeries = interpolateAnchors(spAnchors);
+        const nasSeries = interpolateAnchors(nasAnchors);
+
+        const tm = simulateTimeMachineSeries(startYear, initial, monthly, spSeries, nasSeries, avgReturns.bonds);
+
+        const datasets = [
+          { label: "S&P500（タイムマシン）", data: tm.spValues, borderColor: "#1f77b4", fill: false, tension: 0.2 },
+          { label: "NASDAQ（タイムマシン）", data: tm.nasValues, borderColor: "#2ca02c", fill: false, tension: 0.2 },
+          { label: "米国債（年利 " + (avgReturns.bonds*100).toFixed(1) + "%）", data: tm.bondValues, borderColor: "#ff7f0e", fill: false, tension: 0.2 }
+        ];
+
+        showChart(tm.labels, datasets);
+
+        const scenarioHtml = `
+          <div class="advice-box">
+            <strong>タイムマシンモード使用中</strong>
+            <p>${startYear}年から${CURRENT_YEAR}年までの（MVPサンプル）年末データを基にシミュレーションしています。過去の価格は補間されたサンプル値です（実データへ差し替え可能）。</p>
+          </div>
+        `;
+        const adviceText = getAdviceText(parseInt(document.getElementById("age").value), (CURRENT_YEAR - startYear + 1));
+        const adviceHtml = `<div class="advice-box"><strong>あなたへのアドバイス（参考）</strong><p>${adviceText}</p><p class="small">※タイムマシンは過去の「もしも」を示すツールです。過去の実績は将来の保証ではありません。</p></div>`;
+
+        document.getElementById("result").innerHTML = scenarioHtml + adviceHtml;
+      }
     }
 
-    // カスタムラジオ切替イベント
-    document.querySelectorAll("input[name='mode']").forEach(r => {
-      r.addEventListener("change", e => {
-        document.getElementById("custom-settings").style.display = (e.target.value === "custom") ? "block" : "none";
-      });
+    document.getElementById("switchMode").addEventListener("change", function(e){
+      document.getElementById("customSettings").style.display = (e.target.value === "custom") ? "block" : "none";
     });
-
-    // 初回描画（任意）
-    // simulate();
+    document.getElementById("customSettings").style.display = "none";
   </script>
 </body>
 </html>
