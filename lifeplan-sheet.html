@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>LIM ライフプランニングタイムライン（収入＋配偶者＋年金版）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont,
+        "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    .app-shell {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 4px 0 12px;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .section-caption {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 4px;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+      margin-top: 6px;
+      margin-bottom: 6px;
+    }
+    @media (max-width: 600px) {
+      .input-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    label {
+      font-size: 12px;
+      color: #444;
+      display: block;
+    }
+    input[type="number"],
+    input[type="range"] {
+      width: 100%;
+      padding: 4px 6px;
+      margin-top: 2px;
+      font-size: 14px;
+    }
+    .input-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #555;
+    }
+    .input-inline span {
+      white-space: nowrap;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .btn-primary {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #1f9d55;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+    .hint {
+      font-size: 11px;
+      color: #777;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .summary-line {
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 220px;
+    }
+
+    /* タイムライン（横スクロール） */
+    .timeline-container {
+      margin-top: 6px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 10px;
+    }
+    .timeline-track {
+      display: inline-flex;
+      align-items: flex-start;
+      position: relative;
+      padding-top: 14px;
+      padding-bottom: 4px;
+    }
+    .timeline-track::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 28px;
+      height: 2px;
+      background: #cbd5e0;
+    }
+    .timeline-item {
+      position: relative;
+      width: 140px;
+      margin-right: 10px;
+      flex-shrink: 0;
+      text-align: left;
+    }
+    .timeline-dot {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #a0aec0;
+      z-index: 2;
+    }
+    .timeline-content {
+      margin-top: 40px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      font-size: 12px;
+      line-height: 1.5;
+      min-height: 80px;
+    }
+    .timeline-age {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: 6px;
+      background: #edf2f7;
+      color: #4a5568;
+      white-space: nowrap;
+    }
+    .badge-retire {
+      background: #fed7d7;
+      color: #c53030;
+    }
+    .badge-now {
+      background: #c6f6d5;
+      color: #276749;
+    }
+    .timeline-item.now .timeline-dot {
+      background: #38a169;
+    }
+    .timeline-item.retired .timeline-dot {
+      background: #e53e3e;
+    }
+    .timeline-meta {
+      margin-top: 2px;
+      color: #4a5568;
+    }
+    .timeline-meta span {
+      display: block;
+    }
+    .notice-future {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <h1>LIM ライフプランニングタイムライン（収入モジュール付き試作）</h1>
+    <div class="subtitle">
+      本人の年収カーブ・配偶者の収入・年金を組み込んで、<br>
+      世帯収入と資産の推移を横スクロールのタイムラインで確認する試作版です。
+    </div>
+
+    <!-- 本人・世帯の基本入力 -->
+    <div class="card">
+      <div class="section-title">本人と世帯のざっくり条件（単身が初期値）</div>
+      <div class="section-caption">
+        まずは本人の条件だけで計算します。必要であれば「配偶者の収入を含める」をONにしてください。
+      </div>
+
+      <div class="input-grid">
+        <div>
+          <label>現在の年齢</label>
+          <input id="age" type="number" min="18" max="80" value="30" />
+        </div>
+        <div>
+          <label>現在の年収（本人・万円）</label>
+          <input id="income" type="number" min="100" max="3000" step="10" value="400" />
+        </div>
+        <div>
+          <label>年収成長率（本人・年率）</label>
+          <div class="input-inline">
+            <input id="incomeGrowth" type="range" min="0" max="10" value="3" />
+            <span><span id="incomeGrowthLabel">3</span>%</span>
+          </div>
+        </div>
+        <div>
+          <label>退職想定年齢（本人）</label>
+          <input id="retireAge" type="number" min="50" max="80" value="65" />
+        </div>
+        <div>
+          <label>現在の金融資産残高（世帯・万円）</label>
+          <input id="savings" type="number" min="0" max="100000" step="10" value="100" />
+        </div>
+        <div>
+          <label>毎年の貯蓄率（就業期の世帯収入に対して）</label>
+          <div class="input-inline">
+            <input id="saveRate" type="range" min="0" max="50" value="10" />
+            <span><span id="saveRateLabel">10</span>%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配偶者 -->
+    <div class="card">
+      <div class="section-title">配偶者の収入（必要な場合のみON）</div>
+      <div class="toggle-row">
+        <input type="checkbox" id="spouseEnabled" />
+        <label for="spouseEnabled">配偶者の収入を世帯収入に含める</label>
+      </div>
+
+      <div id="spouseBlock" style="margin-top:6px; display:none;">
+        <div class="section-caption">
+          入力しない場合は単身想定のまま計算します。年齢を空にすると本人と同じ年齢として扱います。
+        </div>
+        <div class="input-grid">
+          <div>
+            <label>配偶者の年齢</label>
+            <input id="spouseAge" type="number" min="18" max="80" placeholder="未入力なら本人と同じ" />
+          </div>
+          <div>
+            <label>配偶者の現在年収（万円）</label>
+            <input id="spouseIncome" type="number" min="0" max="3000" step="10" value="0" />
+          </div>
+          <div>
+            <label>年収成長率（配偶者・年率）</label>
+            <div class="input-inline">
+              <input id="spouseIncomeGrowth" type="range" min="0" max="10" value="2" />
+              <span><span id="spouseIncomeGrowthLabel">2</span>%</span>
+            </div>
+          </div>
+          <div>
+            <label>退職想定年齢（配偶者）</label>
+            <input id="spouseRetireAge" type="number" min="50" max="80" placeholder="未入力なら本人と同じ" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 年金 -->
+    <div class="card">
+      <div class="section-title">年金（世帯合算のざっくり見込み）</div>
+      <div class="section-caption">
+        厚生年金などの個別条件は複雑なので、ここでは「世帯で年間いくらくらいもらえそうか」をざっくり入力します。
+      </div>
+      <div class="input-grid">
+        <div>
+          <label>年金支給開始年齢（世帯）</label>
+          <input id="pensionStartAge" type="number" min="60" max="75" value="65" />
+        </div>
+        <div>
+          <label>年金額（世帯合算・万円/年）</label>
+          <input id="pensionAmount" type="number" min="0" max="1000" step="10" value="150" />
+        </div>
+        <div>
+          <label>期待利回り（年率）</label>
+          <div class="input-inline">
+            <input id="returnRate" type="range" min="0" max="10" value="3" />
+            <span><span id="returnRateLabel">3</span>%</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="runSimulation()">
+        ざっくり未来を描いてみる
+      </button>
+      <div class="hint">
+        ・ここでは「就業期：世帯収入の一部を毎年投資」「退職後：退職前の世帯収入の一定割合を生活費として取り崩し」といった簡略モデルで計算しています。<br>
+        ・後で、住宅・学費・車などのイベント支出を別レイヤーとして足し込む前提です。
+      </div>
+    </div>
+
+    <!-- 概要 & グラフ -->
+    <div class="card">
+      <div class="summary-line" id="summaryText">
+        シミュレーションを実行すると、ここに「資産が何歳まで持ちそうか」などの概要が表示されます。
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="assetChart"></canvas>
+      </div>
+    </div>
+
+    <!-- タイムライン -->
+    <div class="card">
+      <div class="section-title">人生タイムライン（横スクロールで未来を旅する）</div>
+      <div class="timeline-container" id="timelineContainer">
+        <div style="font-size:12px; color:#777;">
+          シミュレーションを実行すると、ここに現在〜老後までの年齢ごとのカードが横方向に並びます。<br>
+          各年の「世帯収入」「年金」「資産残高」をざっくり確認できます。
+        </div>
+      </div>
+      <div class="notice-future">
+        ※ 将来的には、この年齢カードに「住宅購入」「子どもの誕生・学費」「車の買い替え」「親の介護」などのイベントをアイコンとして重ねていく想定です。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ラベル連動
+    const saveRateInput = document.getElementById('saveRate');
+    const returnRateInput = document.getElementById('returnRate');
+    const incomeGrowthInput = document.getElementById('incomeGrowth');
+    const spouseIncomeGrowthInput = document.getElementById('spouseIncomeGrowth');
+
+    const saveRateLabel = document.getElementById('saveRateLabel');
+    const returnRateLabel = document.getElementById('returnRateLabel');
+    const incomeGrowthLabel = document.getElementById('incomeGrowthLabel');
+    const spouseIncomeGrowthLabel = document.getElementById('spouseIncomeGrowthLabel');
+
+    saveRateInput.addEventListener('input', () => {
+      saveRateLabel.textContent = saveRateInput.value;
+    });
+    returnRateInput.addEventListener('input', () => {
+      returnRateLabel.textContent = returnRateInput.value;
+    });
+    incomeGrowthInput.addEventListener('input', () => {
+      incomeGrowthLabel.textContent = incomeGrowthInput.value;
+    });
+    spouseIncomeGrowthInput.addEventListener('input', () => {
+      spouseIncomeGrowthLabel.textContent = spouseIncomeGrowthInput.value;
+    });
+
+    // 配偶者ブロック表示切替
+    const spouseEnabledCheckbox = document.getElementById('spouseEnabled');
+    const spouseBlock = document.getElementById('spouseBlock');
+    spouseEnabledCheckbox.addEventListener('change', () => {
+      spouseBlock.style.display = spouseEnabledCheckbox.checked ? 'block' : 'none';
+    });
+
+    let chartInstance = null;
+
+    function runSimulation() {
+      const age = Number(document.getElementById('age').value) || 30;
+      const incomeBase = Number(document.getElementById('income').value) || 400;
+      const incomeGrowth = (Number(incomeGrowthInput.value) || 0) / 100;
+      const retireAge = Number(document.getElementById('retireAge').value) || 65;
+
+      const savings = Number(document.getElementById('savings').value) || 0;
+      const saveRate = (Number(saveRateInput.value) || 0) / 100;
+      const returnRate = (Number(returnRateInput.value) || 0) / 100;
+
+      const spouseEnabled = spouseEnabledCheckbox.checked;
+      const spouseAgeInput = document.getElementById('spouseAge').value;
+      const spouseAge = spouseAgeInput === "" ? age : Number(spouseAgeInput);
+      const spouseIncomeBase = Number(document.getElementById('spouseIncome').value) || 0;
+      const spouseIncomeGrowth = (Number(spouseIncomeGrowthInput.value) || 0) / 100;
+      const spouseRetireAgeInput = document.getElementById('spouseRetireAge').value;
+      const spouseRetireAge = spouseRetireAgeInput === "" ? retireAge : Number(spouseRetireAgeInput);
+
+      const pensionStartAge = Number(document.getElementById('pensionStartAge').value) || 65;
+      const pensionAmount = Number(document.getElementById('pensionAmount').value) || 0; // 万円/年
+
+      const endAge = 90;
+
+      const ages = [];
+      const assets = [];
+      const householdIncomes = [];
+      const pensionIncomes = [];
+
+      let asset = savings;
+
+      // 退職直前の世帯収入を後で生活費の基準に使う
+      let lastWorkingHouseholdIncome = null;
+
+      // まず全期間の収入を計算
+      for (let a = age; a <= endAge; a++) {
+        const yearsFromNow = a - age;
+        let personIncome = 0;
+        if (a < retireAge) {
+          personIncome = Math.round(incomeBase * Math.pow(1 + incomeGrowth, yearsFromNow));
+        }
+
+        let spouseIncome = 0;
+        if (spouseEnabled) {
+          const spouseYearsFromNow = a - spouseAge;
+          const yrs = Math.max(spouseYearsFromNow, 0);
+          if (a < spouseRetireAge) {
+            spouseIncome = Math.round(spouseIncomeBase * Math.pow(1 + spouseIncomeGrowth, yrs));
+          }
+        }
+
+        let pension = 0;
+        if (a >= pensionStartAge) {
+          pension = pensionAmount;
+        }
+
+        const householdIncome = personIncome + spouseIncome + pension;
+        ages.push(a);
+        householdIncomes.push(householdIncome);
+        pensionIncomes.push(pension);
+
+        if (a < retireAge) {
+          lastWorkingHouseholdIncome = householdIncome;
+        }
+      }
+
+      // 退職後の生活費：退職直前の世帯収入の一定割合（仮に70%）
+      const retireSpendingRate = 0.7;
+      const baseRetireSpending =
+        lastWorkingHouseholdIncome !== null
+          ? lastWorkingHouseholdIncome * retireSpendingRate
+          : 0;
+
+      // 資産推移の計算
+      for (let i = 0; i < ages.length; i++) {
+        const a = ages[i];
+        const householdIncome = householdIncomes[i];
+
+        if (a < retireAge) {
+          // 就業期：貯蓄率に応じて積み上げ
+          const annualSavings = householdIncome * saveRate;
+          asset = (asset + annualSavings) * (1 + returnRate);
+        } else {
+          // 退職後：年金＋（もしあれば）就労収入 − 基準生活費
+          const netFlow = householdIncome - baseRetireSpending;
+          asset = asset * (1 + returnRate) + netFlow;
+        }
+
+        assets.push(Math.round(asset));
+      }
+
+      updateSummary(ages, assets, retireAge);
+      updateChart(ages, assets);
+      updateTimeline(ages, assets, householdIncomes, pensionIncomes, age, retireAge);
+    }
+
+    function updateSummary(ages, assets, retireAge) {
+      const summaryEl = document.getElementById('summaryText');
+      const endIndex = assets.findIndex(v => v < 0);
+      let text = '';
+
+      if (endIndex === -1) {
+        const lastAge = ages[ages.length - 1];
+        text = `現在の前提では、${lastAge}歳まで資産はプラスを維持できそうです（世帯ベース・簡易前提）。`;
+      } else {
+        const brokeAge = ages[endIndex];
+        text = `現在の前提では、約 ${brokeAge} 歳ごろに資産がマイナスになる可能性があります（世帯ベース・簡易前提）。`;
+      }
+
+      text += ` 退職想定年齢（本人）は ${retireAge} 歳です。`;
+      summaryEl.textContent = text;
+    }
+
+    function updateChart(ages, assets) {
+      const ctx = document.getElementById('assetChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.data.labels = ages;
+        chartInstance.data.datasets[0].data = assets;
+        chartInstance.update();
+        return;
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ages,
+          datasets: [{
+            label: '資産残高（万円）',
+            data: assets,
+            borderWidth: 2,
+            tension: 0.2,
+            pointRadius: 0,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: true, text: '年齢' }
+            },
+            y: {
+              title: { display: true, text: '資産残高（万円）' }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    function updateTimeline(ages, assets, householdIncomes, pensionIncomes, currentAge, retireAge) {
+      const container = document.getElementById('timelineContainer');
+      container.innerHTML = '';
+
+      const track = document.createElement('div');
+      track.className = 'timeline-track';
+
+      ages.forEach((age, idx) => {
+        const asset = assets[idx];
+        const income = householdIncomes[idx];
+        const pension = pensionIncomes[idx];
+
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        if (age === currentAge) item.classList.add('now');
+        if (age >= retireAge) item.classList.add('retired');
+
+        const dot = document.createElement('div');
+        dot.className = 'timeline-dot';
+        item.appendChild(dot);
+
+        const content = document.createElement('div');
+        content.className = 'timeline-content';
+
+        const ageLine = document.createElement('div');
+        ageLine.className = 'timeline-age';
+        ageLine.textContent = `${age} 歳`;
+
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        if (age === currentAge) {
+          badge.classList.add('badge-now');
+          badge.textContent = '現在';
+        } else if (age >= retireAge) {
+          badge.classList.add('badge-retire');
+          badge.textContent = 'リタイア後';
+        } else {
+          badge.textContent = '就業中';
+        }
+        ageLine.appendChild(badge);
+        content.appendChild(ageLine);
+
+        const meta = document.createElement('div');
+        meta.className = 'timeline-meta';
+
+        const incomeSpan = document.createElement('span');
+        incomeSpan.textContent = `世帯収入：${Math.round(income).toLocaleString()} 万円/年`;
+        meta.appendChild(incomeSpan);
+
+        if (pension > 0) {
+          const pensionSpan = document.createElement('span');
+          pensionSpan.textContent = `うち年金：${pension.toLocaleString()} 万円/年`;
+          meta.appendChild(pensionSpan);
+        }
+
+        const assetSpan = document.createElement('span');
+        assetSpan.textContent = `資産：${asset.toLocaleString()} 万円`;
+        meta.appendChild(assetSpan);
+
+        content.appendChild(meta);
+
+        // 将来的にはここにイベント（住宅・学費など）を追記予定
+
+        item.appendChild(content);
+        track.appendChild(item);
+      });
+
+      container.appendChild(track);
+
+      // 現在年齢を中央付近に
+      const nowItem = track.querySelector('.timeline-item.now');
+      if (nowItem) {
+        const rect = nowItem.getBoundingClientRect();
+        const trackRect = track.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const offset =
+          rect.left - trackRect.left - (containerRect.width / 2) + (rect.width / 2);
+        container.scrollLeft = offset;
+      }
+    }
+
+    // 初期描画
+    window.addEventListener('load', () => {
+      runSimulation();
+    });
+  </script>
+</body>
+</html>

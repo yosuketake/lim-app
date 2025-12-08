@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>LIM Technologies | Live in the Moment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="LIMは、資産運用とライフプランニングを通じて、あなたが未来を確信を持って選択できるよう支援するプラットフォームです。">
+  <style>
+    :root {
+      --color-bg: #f7faf9;
+      --color-surface: #ffffff;
+      --color-deep: #104a3a;
+      --color-accent: #1aa36c;
+      --color-accent-soft: rgba(26,163,108,0.12);
+      --color-text-main: #152321;
+      --color-text-muted: #5b6b67;
+      --radius-lg: 18px;
+      --radius-xl: 26px;
+      --shadow-soft: 0 18px 45px rgba(0,0,0,0.06);
+      --max-width: 1120px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                   "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif;
+      color: var(--color-text-main);
+      background: radial-gradient(circle at top left, #e0f4eb 0, #f7faf9 40%, #ffffff 100%);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: linear-gradient(to bottom, rgba(247,250,249,0.96), rgba(247,250,249,0.8));
+      border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+
+    .header-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .logo-mark {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0f5132, #1aa36c);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.16em;
+    }
+
+    .logo-text {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    .header-nav a {
+      padding: 4px 0;
+      position: relative;
+    }
+
+    .header-nav a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -3px;
+      width: 0;
+      height: 1px;
+      background: var(--color-accent);
+      transition: width 0.2s ease;
+    }
+
+    .header-nav a:hover::after {
+      width: 100%;
+    }
+
+    .header-nav .header-cta {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(26,163,108,0.3);
+      color: var(--color-deep);
+      font-weight: 500;
+      background: rgba(255,255,255,0.8);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    main {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 18px 16px 56px;
+    }
+
+    /* Hero section */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 28px;
+      align-items: center;
+      padding: 24px 0 32px;
+    }
+
+    .hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(16, 74, 58, 0.08);
+      color: var(--color-deep);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .hero-label-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--color-accent);
+      box-shadow: 0 0 8px rgba(26,163,108,0.9);
+    }
+
+    .hero-title {
+      font-size: clamp(26px, 4vw, 32px);
+      line-height: 1.25;
+      margin: 0 0 12px;
+      color: var(--color-deep);
+    }
+
+    .hero-sub {
+      margin: 0 0 18px;
+      font-size: 15px;
+      color: var(--color-text-muted);
+    }
+
+    .hero-copy {
+      margin: 0 0 22px;
+      font-size: 14px;
+      color: var(--color-text-main);
+      line-height: 1.7;
+    }
+
+    .hero-ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0f5132, #1aa36c);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(5, 63, 39, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 34px rgba(5, 63, 39, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.9);
+      color: var(--color-deep);
+      border: 1px solid rgba(16,74,58,0.16);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      background: #ffffff;
+    }
+
+    .hero-note {
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+
+    .hero-visual {
+      position: relative;
+      border-radius: var(--radius-xl);
+      padding: 18px 18px 18px;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.95) 0, rgba(255,255,255,0.2) 38%, rgba(8,54,38,0.95) 100%),
+        linear-gradient(135deg, #0f5132, #1aa36c);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      color: #eaf8f1;
+    }
+
+    .hero-visual-title {
+      font-size: 12px;
+      opacity: 0.9;
+      margin-bottom: 6px;
+    }
+
+    .hero-visual-main {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .hero-visual-sub {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-bottom: 14px;
+    }
+
+    /* 擬似グラフ（秘密っぽいビジュアル） */
+    .graph-card {
+      position: relative;
+      border-radius: 16px;
+      padding: 12px 12px 16px;
+      background: rgba(3, 26, 18, 0.9);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+
+    .graph-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: #c4e7d6;
+    }
+
+    .graph-chip {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(26,163,108,0.16);
+      font-size: 10px;
+      color: #f4fff9;
+    }
+
+    .graph {
+      position: relative;
+      height: 136px;
+      margin-top: 6px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 3px;
+      align-items: end;
+    }
+
+    .graph-bar {
+      width: 100%;
+      border-radius: 99px 99px 12px 12px;
+      background: linear-gradient(to top, rgba(26,163,108,0.1), rgba(164,255,210,0.95));
+      box-shadow: 0 0 12px rgba(26,163,108,0.45);
+      transform-origin: bottom;
+      animation: barPulse 3.6s ease-in-out infinite alternate;
+    }
+
+    .graph-bar:nth-child(1) { height: 16%; animation-delay: 0.0s; }
+    .graph-bar:nth-child(2) { height: 22%; animation-delay: 0.1s; }
+    .graph-bar:nth-child(3) { height: 28%; animation-delay: 0.2s; }
+    .graph-bar:nth-child(4) { height: 34%; animation-delay: 0.3s; }
+    .graph-bar:nth-child(5) { height: 42%; animation-delay: 0.4s; }
+    .graph-bar:nth-child(6) { height: 52%; animation-delay: 0.5s; }
+    .graph-bar:nth-child(7) { height: 64%; animation-delay: 0.6s; }
+    .graph-bar:nth-child(8) { height: 74%; animation-delay: 0.7s; }
+    .graph-bar:nth-child(9) { height: 82%; animation-delay: 0.8s; }
+    .graph-bar:nth-child(10) { height: 90%; animation-delay: 0.9s; }
+    .graph-bar:nth-child(11) { height: 95%; animation-delay: 1.0s; }
+    .graph-bar:nth-child(12) { height: 100%; animation-delay: 1.1s; }
+
+    @keyframes barPulse {
+      0% { transform: scaleY(1); opacity: 0.9; }
+      100% { transform: scaleY(1.08); opacity: 1; }
+    }
+
+    .graph-overlay-line {
+      position: absolute;
+      inset: 18px 8px 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(180,255,220,0.1);
+      pointer-events: none;
+    }
+
+    .graph-caption {
+      margin-top: 10px;
+      font-size: 10px;
+      color: #c4e7d6;
+      line-height: 1.6;
+    }
+
+    .hero-visual-mesh {
+      position: absolute;
+      inset: -60%;
+      opacity: 0.11;
+      background-image:
+        linear-gradient(90deg, rgba(194,255,219,0.3) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(194,255,219,0.3) 1px, transparent 1px);
+      background-size: 18px 18px;
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    /* Sections 共通 */
+    .section {
+      padding: 26px 0;
+      border-top: 1px solid rgba(0,0,0,0.03);
+    }
+
+    .section:first-of-type {
+      border-top: none;
+    }
+
+    .section-header {
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      margin: 0 0 6px;
+      color: var(--color-deep);
+    }
+
+    .section-lead {
+      margin: 0;
+      font-size: 14px;
+      color: var(--color-text-muted);
+    }
+
+    .section-body {
+      font-size: 14px;
+      color: var(--color-text-main);
+      line-height: 1.8;
+    }
+
+    .highlight-questions {
+      display: grid;
+      gap: 4px;
+      margin: 10px 0 14px;
+      font-weight: 500;
+    }
+
+    .highlight-questions span::before {
+      content: "• ";
+      color: var(--color-accent);
+    }
+
+    /* Tools cards */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 14px;
+    }
+
+    .tool-card {
+      padding: 16px 16px 18px;
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tool-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+    }
+
+    .tool-tag-badge {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--color-accent);
+    }
+
+    .tool-title {
+      font-size: 16px;
+      margin: 0 0 6px;
+      color: var(--color-deep);
+    }
+
+    .tool-sub {
+      font-size: 13px;
+      margin: 0 0 10px;
+      color: var(--color-text-muted);
+    }
+
+    .tool-points {
+      font-size: 13px;
+      margin: 0 0 14px;
+      padding-left: 16px;
+      color: var(--color-text-main);
+    }
+
+    .tool-points li {
+      margin-bottom: 4px;
+    }
+
+    .tool-cta {
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--color-accent-soft);
+      color: var(--color-deep);
+      font-weight: 500;
+    }
+
+    .tool-cta::after {
+      content: "›";
+      font-size: 14px;
+      transform: translateY(0.5px);
+    }
+
+    .tool-orbit {
+      position: absolute;
+      inset: -40%;
+      border-radius: 50%;
+      border: 1px solid rgba(13, 110, 53, 0.04);
+      pointer-events: none;
+    }
+
+    .tool-orbit::before,
+    .tool-orbit::after {
+      content: "";
+      position: absolute;
+      border-radius: inherit;
+      inset: 22%;
+      border: 1px dashed rgba(13, 110, 53, 0.06);
+    }
+
+    .tool-orbit::after {
+      inset: 42%;
+    }
+
+    /* Persona section */
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      font-size: 12px;
+    }
+
+    .persona-card {
+      border-radius: 14px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px 11px;
+      border: 1px solid rgba(0,0,0,0.02);
+    }
+
+    .persona-label {
+      font-size: 11px;
+      color: var(--color-accent);
+      margin-bottom: 2px;
+    }
+
+    .persona-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: var(--color-deep);
+    }
+
+    .persona-body {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+
+    /* Vision section */
+    .vision-list {
+      margin: 10px 0 0;
+      padding-left: 16px;
+      font-size: 13px;
+    }
+
+    .vision-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(15,81,50,0.06);
+      font-size: 11px;
+      color: var(--color-deep);
+      margin-top: 8px;
+    }
+
+    .vision-tag span {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--color-accent);
+    }
+
+    /* Final CTA */
+    .final-cta {
+      padding: 18px 18px 20px;
+      border-radius: var(--radius-xl);
+      background: radial-gradient(circle at top left, #e5f7ef 0, #ffffff 40%, #e2f1ea 100%);
+      box-shadow: var(--shadow-soft);
+      text-align: center;
+    }
+
+    .final-cta-title {
+      font-size: 18px;
+      margin: 0 0 8px;
+      color: var(--color-deep);
+    }
+
+    .final-cta-text {
+      font-size: 14px;
+      margin: 0 0 16px;
+      color: var(--color-text-main);
+    }
+
+    .final-cta-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    footer {
+      font-size: 11px;
+      text-align: center;
+      padding: 20px 12px 28px;
+      color: var(--color-text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 820px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px;
+        padding-top: 18px;
+      }
+      .hero-visual {
+        order: -1;
+      }
+      main {
+        padding-top: 10px;
+      }
+      .tools-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .persona-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .header-inner {
+        padding-inline: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-ctas {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-mark">LIM</div>
+        <div class="logo-text">Live in the Moment / Technologies</div>
+      </div>
+      <nav class="header-nav">
+        <a href="#why">なぜLIMか</a>
+        <a href="#tools">できること</a>
+        <a href="#vision">LIMの描く未来</a>
+        <a href="#start" class="header-cta">はじめる</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div>
+        <div class="hero-label">
+          <span class="hero-label-dot"></span>
+          LIVE IN THE MOMENT
+        </div>
+        <h1 class="hero-title">
+          未来を、<br>確信を持って選択するために。
+        </h1>
+        <p class="hero-sub">
+          LIMは、資産形成とライフプランニングを通じて<br>
+          「選べる未来」を手に入れるためのプラットフォームです。
+        </p>
+        <p class="hero-copy">
+          将来いくら必要なのか。いつまで働けば安心なのか。<br>
+          誰もはっきり教えてくれない問いに、データとロジックで答えを近づけていきます。<br>
+          ここは、気づいた人だけが静かにたどり着く「選択の実験場」です。
+        </p>
+
+        <div class="hero-ctas">
+          <!-- TODO: href を実際のシミュレータURLに変更 -->
+          <a href="simulator.html" class="btn btn-primary">資産成長をシミュレーションする</a>
+          <!-- TODO: href を実際のライフプランページに変更 -->
+          <a href="lifeplan.html" class="btn btn-secondary">ライフプランを描いてみる</a>
+        </div>
+        <div class="hero-note">
+          ※ログイン不要・無料でお試しいただけます。
+        </div>
+      </div>
+
+      <!-- Hero Visual (擬似グラフ) -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-visual-mesh"></div>
+        <div class="hero-visual-title">Asset Growth Insight</div>
+        <div class="hero-visual-main">気づいた人だけが見ている「曲線」がある。</div>
+        <div class="hero-visual-sub">
+          同じ収入、同じ生活でも。<br>
+          いつ・どれだけ・どう投資するかで、20年後の差は桁違いになります。
+        </div>
+
+        <div class="graph-card">
+          <div class="graph-header">
+            <span>年齢別・長期シミュレーション（イメージ）</span>
+            <span class="graph-chip">20歳 → 65歳</span>
+          </div>
+          <div class="graph">
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-bar"></div>
+            <div class="graph-overlay-line"></div>
+          </div>
+          <p class="graph-caption">
+            実際のツールでは、過去数十年分の市場データをもとに、<br>
+            年齢・リスク許容度に合わせたシミュレーション結果を確認できます。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why LIM -->
+    <section id="why" class="section">
+      <div class="section-header">
+        <h2 class="section-title">なぜ、LIMなのか。</h2>
+        <p class="section-lead">情報は溢れているのに、「決めること」はどんどん難しくなっています。</p>
+      </div>
+      <div class="section-body">
+        <div class="highlight-questions">
+          <span>将来いくらあれば安心なのか。</span>
+          <span>何歳まで働けば、生活を守れるのか。</span>
+          <span>住宅・教育・老後…何を優先すべきなのか。</span>
+        </div>
+        <p>
+          本やSNS、動画、FP相談。役に立つ情報はたくさんあります。<br>
+          それでも、多くの人は「自分の場合はどうなのか」がわからないまま、不安だけが積み上がっていきます。
+        </p>
+        <p>
+          LIMは、あなたの<span style="background:rgba(255,255,0,0.25);">「自分の場合」</span>にフォーカスした意思決定支援ツールです。<br>
+          収入・支出・投資・年齢といった前提条件をもとに、<br>
+          データで未来を見える化し、あなた自身が納得して選べる状態を目指します。
+        </p>
+      </div>
+    </section>
+
+    <!-- Tools -->
+    <section id="tools" class="section">
+      <div class="section-header">
+        <h2 class="section-title">LIMでできること</h2>
+        <p class="section-lead">まずは、2つのツールから始まります。</p>
+      </div>
+      <div class="tools-grid">
+        <!-- 資産成長シミュレーション -->
+        <article class="tool-card">
+          <div class="tool-orbit"></div>
+          <div class="tool-tag">
+            <span class="tool-tag-badge"></span>
+            個人向け資産運用支援
+          </div>
+          <h3 class="tool-title">📈 資産成長シミュレーション</h3>
+          <p class="tool-sub">
+            過去数十年の市場データをもとに、<br>
+            あなたの「未来の資産カーブ」を可視化します。
+          </p>
+          <ul class="tool-points">
+            <li>年齢に応じた投資配分を自動で試算</li>
+            <li>暴落シナリオも含めた<span style="white-space:nowrap;">ワーストケース</span>表示</li>
+            <li>積立額・開始年齢・リスク許容度を変えて「遊びながら理解」</li>
+          </ul>
+          <a href="simulator.html" class="tool-cta">
+            資産の未来を試算する
+          </a>
+        </article>
+
+        <!-- ライフプランニング -->
+        <article class="tool-card">
+          <div class="tool-orbit"></div>
+          <div class="tool-tag">
+            <span class="tool-tag-badge"></span>
+            ライフプランニング
+          </div>
+          <h3 class="tool-title">📅 ライフプランニングシート</h3>
+          <p class="tool-sub">
+            収入・支出・投資・年金をまとめて整理し、<br>
+            一生のキャッシュフローを見える化します。
+          </p>
+          <ul class="tool-points">
+            <li>昇給ペース・住宅・教育・老後資金などを一括管理</li>
+            <li>将来の「資産残高」が年次で追えるタイムライン</li>
+            <li>現状が危うい場合は、改善ポイントをヒント表示（将来実装予定）</li>
+          </ul>
+          <a href="lifeplan.html" class="tool-cta">
+            ライフプランを描いてみる
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <!-- Personas（秘密の共感ゾーン） -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">こんな人に、特に刺さるかもしれません。</h2>
+        <p class="section-lead">複数のペルソナを想定していますが、その一部をご紹介します。</p>
+      </div>
+      <div class="section-body">
+        <div class="persona-grid">
+          <div class="persona-card">
+            <div class="persona-label">20代〜30代</div>
+            <div class="persona-title">「ちゃんと貯めたい。でも何から？」</div>
+            <div class="persona-body">
+              NISAや積立投資を始めたばかり。<br>
+              いつまでにどれくらい貯まるのか、<br>
+              なんとなくではなく数字で知りたい人。
+            </div>
+          </div>
+          <div class="persona-card">
+            <div class="persona-label">30代〜40代</div>
+            <div class="persona-title">住宅・教育・老後、全部が気になり始めた人</div>
+            <div class="persona-body">
+              住宅ローンや子どもの教育費が現実に。<br>
+              「このままの働き方・貯め方で本当に大丈夫？」を<br>
+              一度、落ち着いて確認したい人。
+            </div>
+          </div>
+          <div class="persona-card">
+            <div class="persona-label">50代〜60代</div>
+            <div class="persona-title">「これ以上リスクは取りたくない」人</div>
+            <div class="persona-body">
+              大きく増やすより、減らしたくない。<br>
+              年金と手持ちの資産で、どこまで生活を維持できるか。<br>
+              守りの視点でプランを見直したい人。
+            </div>
+          </div>
+        </div>
+        <p style="margin-top: 14px; font-size: 12px; color: var(--color-text-muted);">
+          ※現在は個人向けを中心に設計していますが、将来的には法人・事業主向けのシナリオも拡張予定です。
+        </p>
+      </div>
+    </section>
+
+    <!-- Vision -->
+    <section id="vision" class="section">
+      <div class="section-header">
+        <h2 class="section-title">LIMが描く未来</h2>
+        <p class="section-lead">個人の資産運用から、企業の意思決定まで。</p>
+      </div>
+      <div class="section-body">
+        <p>
+          LIMは、人が迷わず選択できる世界を目指しています。<br>
+          いまは「個人の資産形成・ライフプランニング」からスタートしていますが、<br>
+          将来的には、製造業を中心とした企業の意思決定支援にも広げていきます。
+        </p>
+        <ul class="vision-list">
+          <li>個人向け：資産運用・ライフプランの意思決定支援</li>
+          <li>中小企業向け：設備投資や人員計画などのシミュレーション</li>
+          <li>製造業向け：デジタル化・生産性向上のためのコンサルティング</li>
+        </ul>
+        <div class="vision-tag">
+          <span></span>
+          これらは「Coming soon」。今は、最初の一歩としてMVPを育てています。
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section id="start" class="section">
+      <div class="final-cta">
+        <h2 class="final-cta-title">正しい選択が積み重なれば、人生は大きく変わる。</h2>
+        <p class="final-cta-text">
+          まずは、あなたの「今」と「これから」を数字で見てみませんか。<br>
+          特別な知識は不要です。数分触るだけでも、見えてくるものがあります。
+        </p>
+        <div class="final-cta-buttons">
+          <a href="simulator.html" class="btn btn-primary">資産の未来を試算する</a>
+          <a href="lifeplan.html" class="btn btn-secondary">人生のタイムラインを描く</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © LIM Technologies. Live in the Moment.
+  </footer>
+</body>
+</html>
